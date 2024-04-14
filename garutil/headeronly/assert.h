@@ -14,7 +14,7 @@
     #define FAIL_PRINT(msg) (void)(0)
     #define ASSERT(condition, msg) (void)(0)
 #else
-    #define FAIL_PRINT(msg) fprintf(stderr, "FAILED ASSERTION: \"%s\" %s:%d", msg, __FILE__, __LINE__)
+    #define FAIL_PRINT(msg) fprintf(stderr, "FAILED ASSERTION: \"%s\" %s:%d\n", msg, __FILE__, __LINE__)
     #define ASSERT(condition, msg) \
     do                             \
     {                              \
