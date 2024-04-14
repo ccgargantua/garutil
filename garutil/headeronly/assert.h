@@ -1,5 +1,5 @@
 #ifndef ASSERT_H
-
+#define ASSERT_H
 
 #include <stdio.h>
 #include <stdlib.h>
