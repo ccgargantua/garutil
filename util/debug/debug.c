@@ -1,0 +1,20 @@
+#include "debug.h"
+
+#include <stdarg.h>
+#include <stdio.h>
+
+#ifndef NDEBUG
+void dbg_printf(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+}
+
+#else
+
+void dbg_printf(const char *fmt, ...)
+{}
+
+#endif
