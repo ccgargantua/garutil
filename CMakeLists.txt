@@ -5,9 +5,9 @@ set(CMAKE_C_STANDARD 11)
 
 option(GUTIL_TEST "Enable GUTIL testing mode" OFF)
 
-add_library(gutil STATIC util/arena/arena.c
-        util/debug/debug.c
-        util/debug/debug.h)
+add_library(gutil STATIC
+        util/arena/arena.c
+        util/debug/debug.c)
 target_include_directories(gutil PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/util)
 
 if(GUTIL_TEST)

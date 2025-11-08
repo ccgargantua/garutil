@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #ifndef NDEBUG
+
 void dbg_printf(const char *fmt, ...)
 {
     va_list args;
