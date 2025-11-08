@@ -7,7 +7,9 @@ option(GUTIL_TEST "Enable GUTIL testing mode" OFF)
 
 add_library(gutil STATIC
         util/arena/arena.c
-        util/debug/debug.c)
+        util/debug/debug.c
+        util/ini/ini.c
+        util/ini/ini.h)
 target_include_directories(gutil PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/util)
 
 if(GUTIL_TEST)
@@ -15,6 +17,7 @@ if(GUTIL_TEST)
     add_executable(gutil_tests
             tests/rktest.c
             tests/arena_tests.c
+            tests/ini_tests.c
     )
     target_link_libraries(gutil_tests PRIVATE gutil m)
     target_compile_definitions(gutil PRIVATE GUTIL_TEST)
