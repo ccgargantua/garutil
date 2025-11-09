@@ -61,7 +61,7 @@ INIData_t *ini_parse_file(const char *filename)
 
 
 
-void ini_write_file(INIData_t *data, const char *filename)
+void ini_write_file(const INIData_t *data, const char *filename)
 {
     assert(data);
     assert(filename);
@@ -71,13 +71,13 @@ void ini_write_file(INIData_t *data, const char *filename)
 
     for (int i = 0; i < data->section_count; i++)
     {
-        INISection_t *section = &data->sections[i];
+        const INISection_t *section = &data->sections[i];
         fputs("\n[", file);
         fputs(section->name, file);
         fputs("]\n", file);
         for (int j = 0; j < section->pair_count; j++)
         {
-            INIPair_t *pair = &section->pairs[j];
+            const INIPair_t *pair = &section->pairs[j];
             fputs(pair->key, file);
             fputs("=", file);
             fputs(pair->value, file);
@@ -92,9 +92,7 @@ void ini_write_file(INIData_t *data, const char *filename)
 
 INISection_t *ini_has_section(const INIData_t *data, const char *section)
 {
-    assert(data);
-    assert(section);
-    assert(data->sections || data->section_count == 0);
+    if (!data || !section || !data->sections) return NULL;
     static INISection_t *cached = NULL;
     if (cached)
         if (strncmp(section, cached->name, INI_MAX_STRING_SIZE) == 0)
@@ -129,8 +127,9 @@ INISection_t *ini_add_section(INIData_t *data, const char *name)
     if (data->section_count >= data->section_allocation)
     {
         data->section_allocation *= 2;
-        data->sections = realloc(data->sections, sizeof(INIPair_t) * data->section_allocation);
-        assert(data->sections);
+        INISection_t *re = realloc(data->sections, sizeof(INIPair_t) * data->section_allocation);
+        if (!re) return NULL;
+        data->sections = re;
     }
     INISection_t *section = &data->sections[data->section_count++];
     ini_section_init(name, section);
@@ -139,7 +138,7 @@ INISection_t *ini_add_section(INIData_t *data, const char *name)
 
 
 
-INIPair_t *ini_add_pair(const INIData_t *data, const char *section, INIPair_t pair)
+INIPair_t *ini_add_pair(const INIData_t *data, const char *section, const INIPair_t pair)
 {
     INISection_t *existing_section = ini_has_section(data, section);
     if (!existing_section) return NULL;
@@ -148,15 +147,17 @@ INIPair_t *ini_add_pair(const INIData_t *data, const char *section, INIPair_t pa
 
 
 
-INIPair_t *ini_add_pair_to_section(INISection_t *section, INIPair_t pair)
+INIPair_t *ini_add_pair_to_section(INISection_t *section, const INIPair_t pair)
 {
     assert(section);
 
     if (section->pair_count >= section->pair_allocation)
     {
         section->pair_allocation *= 2;
-        section->pairs = realloc(section->pairs, sizeof(INIPair_t) * section->pair_allocation);
-        assert(section->pairs);
+        INIPair_t *re = realloc(section->pairs, sizeof(INIPair_t) * section->pair_allocation);
+        if (!re)
+            return NULL;
+        section->pairs = re;
     }
 
     INIPair_t *new_pair = &section->pairs[section->pair_count++];
