@@ -97,10 +97,10 @@ INISection_t *ini_has_section(const INIData_t *data, const char *section)
     assert(data->sections || data->section_count == 0);
     static INISection_t *cached = NULL;
     if (cached)
-        if (strcmp(section, cached->name) == 0)
+        if (strncmp(section, cached->name, INI_MAX_STRING_SIZE) == 0)
             return cached;
     for (int i = 0; i < data->section_count; i++)
-        if (strcmp(section, data->sections[i].name) == 0)
+        if (strncmp(section, data->sections[i].name, INI_MAX_STRING_SIZE) == 0)
         {
             cached = &data->sections[i];
             return cached;
@@ -176,7 +176,7 @@ const char *ini_get_value(const INIData_t *data, const char *section, const char
     INISection_t *found_section = NULL;
     for (int i = 0; i < data->section_count; i++)
     {
-        if (strcmp(data->sections[i].name, section) == 0)
+        if (strncmp(data->sections[i].name, section, INI_MAX_STRING_SIZE) == 0)
         {
             found_section = &data->sections[i];
             break;
@@ -187,7 +187,7 @@ const char *ini_get_value(const INIData_t *data, const char *section, const char
 
     for (int i = 0; i < found_section->pair_count; i++)
     {
-        if (strcmp(found_section->pairs[i].key, key) == 0)
+        if (strncmp(found_section->pairs[i].key, key, INI_MAX_STRING_SIZE) == 0)
             return found_section->pairs[i].value;
     }
 
