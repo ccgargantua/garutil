@@ -212,69 +212,12 @@ void ini_free(INIData_t *data)
 
 
 
-// Assumes line is null-terminated.
-bool ini_is_pair(const char *line, INIPair_t *pair)
+static const char *skip_ignored_characters_(const char *c)
 {
-    assert(line);
-    const char *c = line;
-
-    char *dest_c = NULL;
-    if (pair) dest_c = pair->key;
-
-    // Spaces before key
     while (isspace(*c)) c++;
-
-    // Key
-    if (!isalpha(*c) && *c != '_') goto is_not_pair;
-    while (isalnum(*c) || *c == '_')
-    {
-        if (dest_c)
-        {
-            assert(dest_c - pair->key < INI_MAX_STRING_SIZE && "Exceeded max string length.");
-            *dest_c++ = *c;
-        }
-        c++;
-    }
-    if (dest_c) *dest_c = '\0';
-
-    // Spaces between key and =
-    while (isspace(*c)) c++;
-
-    // =
-    if (*c != '=') goto is_not_pair;
-    c++;
-
-    if (pair)
-        dest_c = pair->value;
-
-    // Spaces before value
-    while (isspace(*c)) c++;
-
-    // value
-    while (!isspace(*c) && *c != '\0')
-    {
-        if (dest_c)
-        {
-            assert(dest_c - pair->value < INI_MAX_STRING_SIZE && "Exceeded max string length.");
-            *dest_c++ = *c;
-        }
-        c++;
-    }
-    if (dest_c) *dest_c = '\0';
-
-    // Trailing spaces, comments, null terminator
-    while (isspace(*c)) c++;
-    if (*c != '#' && *c != ';' && *c != '\0') goto is_not_pair;
-
-    return true;
-
-    is_not_pair:
-    if (pair)
-    {
-        pair->key[0] = '\0';
-        pair->value[0] = '\0';
-    }
-    return false;
+    if (*c == ';' || *c == '#')
+        while (*c != '\0') c++;
+    return c;
 }
 
 
@@ -282,9 +225,22 @@ bool ini_is_pair(const char *line, INIPair_t *pair)
 // Assumes line is null-terminated.
 bool ini_is_blank_line(const char *line)
 {
-    while (isspace(*line)) line++;
-    if (*line == '\0' || *line == ';' || *line == '#') return true;
-    return false;
+    const char *c = skip_ignored_characters_(line);
+    return (*c == '\0');
+}
+
+
+
+static bool is_valid_section_starting_character_(const char c)
+{
+    return (isalpha(c) || c == '_');
+}
+
+
+
+static bool is_valid_section_character_(const char c)
+{
+    return (isalnum(c) || c == '_');
 }
 
 
@@ -299,37 +255,138 @@ bool ini_is_section(const char *line, INISection_t *section)
     if (section)
         dest_c = section->name;
 
-    // Leading spaces
-    while (isspace(*c)) c++;
-
-    // Begin section name
+    c = skip_ignored_characters_(c);
     if (*c++ != '[') goto is_not_section;
-    while (isspace(*c)) c++;
+    c = skip_ignored_characters_(c);
 
-    // Section name
-    if (!isalpha(*c) && *c != '_') goto is_not_section;
-    while (isalnum(*c) || *c == '_')
+    if (!is_valid_section_starting_character_(*c)) goto is_not_section;
+    while (is_valid_section_character_(*c))
     {
         if (dest_c)
         {
             assert(dest_c - section->name < INI_MAX_STRING_SIZE && "Exceeded max string length.");
+            if (dest_c - section->name >= INI_MAX_STRING_SIZE)
+                return false;
             *dest_c++ = *c;
         }
         c++;
     }
     if (dest_c) *dest_c = '\0';
 
-    while (isspace(*c)) c++;
+    c = skip_ignored_characters_(c);
     if (*c != ']') goto is_not_section;
     c++;
 
-    while (isspace(*c)) c++;
-    if (*c != '#' && *c != ';' && *c != '\0') goto is_not_section;
+    c = skip_ignored_characters_(c);
+    if (*c != '\0') goto is_not_section;
 
     return true;
 
     is_not_section:
     if (section)
         section->name[0] = '\0';
+    return false;
+}
+
+
+
+static bool is_valid_key_starting_value_(const char c)
+{
+    return (isalpha(c) || c == '_');
+}
+
+
+
+static bool is_valid_key_character_(const char c)
+{
+    return (isalnum(c) || c == '_');
+}
+
+
+
+static bool is_valid_value_character_(const char c)
+{
+    if isalnum(c) return true;
+    switch (c)
+    {
+    case '_':
+    case '-':
+    case '.':
+    case ',':
+    case ':':
+    case '"':
+    case '\'':
+    case '(':
+    case ')':
+    case '[':
+    case ']':
+    case '{':
+    case '}':
+    case '\\':
+    case '/':
+        return true;
+    default:
+        return false;
+    }
+}
+
+
+
+// Assumes line is null-terminated.
+bool ini_is_pair(const char *line, INIPair_t *pair)
+{
+    assert(line);
+    const char *c = line;
+
+    char *dest_c = NULL;
+    if (pair) dest_c = pair->key;
+
+    c = skip_ignored_characters_(c);
+
+    // Key
+    if (!is_valid_key_starting_value_(*c)) goto is_not_pair;
+    while (is_valid_key_character_(*c))
+    {
+        if (dest_c)
+        {
+            if (dest_c - pair->key >= INI_MAX_STRING_SIZE) return false;
+            *dest_c++ = *c;
+        }
+        c++;
+    }
+    if (dest_c) *dest_c = '\0';
+
+    c = skip_ignored_characters_(c);
+    if (*c != '=') goto is_not_pair;
+    c++;
+    c = skip_ignored_characters_(c);
+
+    if (pair)
+        dest_c = pair->value;
+
+
+    // value
+    while (is_valid_value_character_(*c))
+    {
+        if (dest_c)
+        {
+            if (dest_c - pair->value >= INI_MAX_STRING_SIZE) return false;
+            *dest_c++ = *c;
+        }
+        c++;
+    }
+    if (dest_c) *dest_c = '\0';
+
+    c = skip_ignored_characters_(c);
+    if (*c != '\0') goto is_not_pair;
+
+    return true;
+
+    is_not_pair:
+    if (pair)
+    {
+        pair->key[0] = '\0';
+        pair->value[0] = '\0';
+    }
     return false;
 }
