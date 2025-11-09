@@ -226,21 +226,21 @@ static const char *skip_ignored_characters_(const char *c)
 bool ini_is_blank_line(const char *line)
 {
     const char *c = skip_ignored_characters_(line);
-    return (*c == '\0');
+    return *c == '\0';
 }
 
 
 
 static bool is_valid_section_starting_character_(const char c)
 {
-    return (isalpha(c) || c == '_');
+    return isalpha(c) || c == '_';
 }
 
 
 
 static bool is_valid_section_character_(const char c)
 {
-    return (isalnum(c) || c == '_');
+    return isalnum(c) || c == '_';
 }
 
 
@@ -292,14 +292,14 @@ bool ini_is_section(const char *line, INISection_t *section)
 
 static bool is_valid_key_starting_value_(const char c)
 {
-    return (isalpha(c) || c == '_');
+    return isalpha(c) || c == '_';
 }
 
 
 
 static bool is_valid_key_character_(const char c)
 {
-    return (isalnum(c) || c == '_');
+    return isalnum(c) || c == '_';
 }
 
 
@@ -307,7 +307,7 @@ static bool is_valid_key_character_(const char c)
 static bool is_valid_value_character_(const char c)
 {
     if isalnum(c) return true;
-    char valid_special[] = "_-+.,:\"\'()[]{}\\/";
+    const char valid_special[] = "_-+.,:\"\'()[]{}\\/";
     for (int i = 0; i < sizeof(valid_special); i++)
         if (c == valid_special[i]) return true;
     return false;
