@@ -95,9 +95,16 @@ INISection_t *ini_has_section(const INIData_t *data, const char *section)
     assert(data);
     assert(section);
     assert(data->sections || data->section_count == 0);
+    static INISection_t *cached = NULL;
+    if (cached)
+        if (strcmp(section, cached->name) == 0)
+            return cached;
     for (int i = 0; i < data->section_count; i++)
         if (strcmp(section, data->sections[i].name) == 0)
-            return &data->sections[i];
+        {
+            cached = &data->sections[i];
+            return cached;
+        }
     return NULL;
 }
 
