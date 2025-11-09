@@ -5,32 +5,211 @@
 
 #define INI_MAX_STRING_SIZE 256
 #define INI_MAX_LINE_SIZE 1024
-#define INI_GLOBAL_SECTION "__GLOBAL__"
 
+
+/*
+ * Key=value pair
+ */
 typedef struct
 {
-    char name[INI_MAX_STRING_SIZE];
-} INISection_t;
-
-typedef struct
-{
-    INISection_t section;
     char key[INI_MAX_STRING_SIZE];
     char value[INI_MAX_STRING_SIZE];
 } INIPair_t;
 
+/*
+ * [Section]
+ *
+ * Keeps track of encapsulated pairs, the number of pairs,
+ * and the number of allocated pairs.
+ */
 typedef struct
 {
+    char name[INI_MAX_STRING_SIZE];
     INIPair_t *pairs;
     unsigned pair_count;
+    unsigned pair_allocation;
+} INISection_t;
+
+/*
+ * Data structure for INI contents. Keeps track of
+ * sections and the number of sections.
+ */
+typedef struct
+{
+    INISection_t *sections;
+    unsigned section_count;
+    unsigned section_allocation;
 } INIData_t;
 
+/*
+ * Parse an ini file and populate a data structure
+ * with contents. User will need to free the returned
+ * object on their own later on with a call to ini_free()
+ *
+ * Params:
+ *   filename - Name of the file to parse
+ *
+ * Returns:
+ *   A pointer to an INIData_t object. Object contains
+ *   heap-allocated data.
+ */
 INIData_t *ini_parse_file(const char *filename);
-const char *ini_get_value(const INIData_t *data, const char *section, const char *key);
-void ini_free(INIData_t *data);
-bool ini_is_blank_line(const char *line);
-bool ini_is_pair(const char *line, INIPair_t *pair);
-bool ini_is_section(const char *line, INISection_t *section);
 
+/*
+ * Use the contents of an INIData_t object to generate an
+ * INI file (or overwrite an existing one)
+ *
+ * Params:
+ *   data     - A pointer to the INIData_t object whose data
+ *              you would like to write
+ *   filename - The name of the output file.
+ */
+void ini_write_file(INIData_t *data, const char *filename);
+
+/*
+ * Query for a section object based on the section name.
+ *
+ * Params:
+ *   data    - The INIData_t object that represents an INI file.
+ *   section - The name of the section you are checking for.
+ *
+ * Returns:
+ *   A pointer to the located INISection_t object, or NULL if
+ *   the section is not found.
+ */
+INISection_t *ini_has_section(const INIData_t *data, const char *section);
+
+/*
+ * Initialize a section with a name, an allocation for pairs,
+ * and starting its pair count at 0.
+ *
+ * Params:
+ *   name    - The name of the section.
+ *   section - Destination pointer for the setion to be initialized.
+ */
+void ini_section_init(const char *name, INISection_t *section);
+
+/*
+ * Add a section to an INIData_t object by providing the name
+ * of the new section. This internally will call ini_section_init()
+ * (see above).
+ *
+ * Param:
+ *   data - The INIData_t object that will acquire the new section.
+ *   name - The name of the section to be added.
+ *
+ * Returns:
+ *   A pointer to the newly-created section, or NULL on error or
+ *   if the section already exists.
+ */
+INISection_t *ini_add_section(INIData_t *data, const char *name);
+
+/*
+ * Add a pair to an INIData_t object by providing the section
+ * name and indirectly adding it to the section.
+ *
+ * Param:
+ *   data    - The INIData_t object to add the pair to.
+ *   section - The **name** of the section to add the pair
+ *             to.
+ *   pair    - The pair to be added.
+ *
+ * Return:
+ *   A pointer to the pair after being added to the proper
+ *   section within `data`, or NULL on failure (i.e., providing
+ *   a name for a section that does not exist in `data`)
+ */
+INIPair_t *ini_add_pair(const INIData_t *data, const char *section, INIPair_t pair);
+
+/*
+ * Add a pair directly to a section, agnostic to the parent
+ * INIData_t object.
+ *
+ * Param:
+ *   section - The section to acquire the pair.
+ *   pair    - A pair object whose data will be copied into
+ *             a new pair in the section.
+ *
+ * Returns:
+ *   A pointer to the newly-added pair within the section.
+ */
+INIPair_t *ini_add_pair_to_section(INISection_t *section, INIPair_t pair);
+
+/*
+ * Retrieve a value from an INIData_t object given a section
+ * name and a key value.
+ *
+ * Params:
+ *   data    - The INIData_t object to be searched.
+ *   section - The section to search for.
+ *   key     - The key to search for.
+ *
+ * Returns:
+ *   The value in the form of a null-terminated C-string, or
+ *   NULL if not found.
+ */
+const char *ini_get_value(const INIData_t *data, const char *section, const char *key);
+
+/*
+ * Free the memory resources used by an INIData_t object.
+ * This should be called if you have created an INIData_t
+ * object with ini_parse_file()
+ *
+ * Params:
+ *   data - The INIData_t object to be free'd.
+ */
+void ini_free(INIData_t *data);
+
+/*
+ * A helper function that parses a character array and
+ * determines if the array represents a blank line via
+ * INI syntax rules (contains only whitespace or comments)
+ *
+ * Params:
+ *   line - The character array to be parsed.
+ *
+ * Returns:
+ *   True if the line is considered blank, false
+ *   otherwise.
+ */
+bool ini_is_blank_line(const char *line);
+
+/*
+ * A helper function that parses a character array and
+ * determines if the array represents a k=v pair via
+ * INI syntax rules.
+ *
+ * Params:
+ *   line - The character array to be parsed.
+ *   pair - A pointer to a destination pair to store
+ *          key and value strings. If NULL is provided,
+ *          has no effect. If a string is not a valid
+ *          pair, then the key and value strings are
+ *          zero-length and null-terminated.
+
+ * Returns:
+ *   True if the line is considered a legal k=v pair,
+ *   false otherwise.
+ */
+bool ini_is_pair(const char *line, INIPair_t *pair);
+
+/*
+ * A helper function that parses a character array and
+ * determines if the array represents a [Section] via
+ * INI syntax rules.
+ *
+ * Params:
+ *   line    - The character array to be parsed.
+ *   section - A pointer to a destination section to
+ *             store name strings. If NULL is provided,
+ *             has no effect. If a string is not a valid
+ *             section, then the name string is zero-length
+ *             and null-terminated.
+ *
+ * Returns:
+ *   True if the line is considered a leval section,
+ *   false otherwise.
+ */
+bool ini_is_section(const char *line, INISection_t *section);
 
 #endif //INI_H

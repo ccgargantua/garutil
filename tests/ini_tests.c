@@ -118,3 +118,28 @@ TEST(ini_tests, file_parsing)
     ASSERT_STREQ(ini_get_value(data, "another", "this_one"), "yeah");
     ini_free(data);
 }
+
+TEST(ini_tests, file_writing)
+{
+    INIData_t *data = ini_parse_file("../tests/test.ini");
+    ini_write_file(data, "../tests/test_copy.ini");
+    INIData_t *copy = ini_parse_file("../tests/test_copy.ini");
+
+    ASSERT_EQ(data->section_count, copy->section_count);
+
+    for (int i = 0; i < data->section_count; i++)
+    {
+        INISection_t *section = &data->sections[i];
+        for (int j = 0; j < section->pair_count; j++)
+        {
+            const char *key = section->pairs[j].key;
+            const char *value = section->pairs[j].value;
+
+            ASSERT_STREQ(value, ini_get_value(copy, section->name, key));
+
+        }
+    }
+
+    ini_free(data);
+    ini_free(copy);
+}
