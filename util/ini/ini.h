@@ -64,7 +64,7 @@ INIData_t *ini_parse_file(const char *filename);
  *              you would like to write
  *   filename - The name of the output file.
  */
-void ini_write_file(INIData_t *data, const char *filename);
+void ini_write_file(const INIData_t *data, const char *filename);
 
 /*
  * Query for a section object based on the section name.
