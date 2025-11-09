@@ -311,6 +311,7 @@ static bool is_valid_value_character_(const char c)
     {
     case '_':
     case '-':
+    case '+':
     case '.':
     case ',':
     case ':':
