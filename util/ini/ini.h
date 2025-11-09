@@ -1,10 +1,15 @@
 #ifndef INI_H
 #define INI_H
 
+
+
 #include <stdbool.h>
+
+
 
 #define INI_MAX_STRING_SIZE 256
 #define INI_MAX_LINE_SIZE 1024
+
 
 
 /*
@@ -15,6 +20,8 @@ typedef struct
     char key[INI_MAX_STRING_SIZE];
     char value[INI_MAX_STRING_SIZE];
 } INIPair_t;
+
+
 
 /*
  * [Section]
@@ -30,6 +37,8 @@ typedef struct
     unsigned pair_allocation;
 } INISection_t;
 
+
+
 /*
  * Data structure for INI contents. Keeps track of
  * sections and the number of sections.
@@ -40,6 +49,8 @@ typedef struct
     unsigned section_count;
     unsigned section_allocation;
 } INIData_t;
+
+
 
 /*
  * Parse an ini file and populate a data structure
@@ -55,6 +66,8 @@ typedef struct
  */
 INIData_t *ini_parse_file(const char *filename);
 
+
+
 /*
  * Use the contents of an INIData_t object to generate an
  * INI file (or overwrite an existing one)
@@ -65,6 +78,8 @@ INIData_t *ini_parse_file(const char *filename);
  *   filename - The name of the output file.
  */
 void ini_write_file(const INIData_t *data, const char *filename);
+
+
 
 /*
  * Query for a section object based on the section name.
@@ -79,6 +94,8 @@ void ini_write_file(const INIData_t *data, const char *filename);
  */
 INISection_t *ini_has_section(const INIData_t *data, const char *section);
 
+
+
 /*
  * Initialize a section with a name, an allocation for pairs,
  * and starting its pair count at 0.
@@ -88,6 +105,8 @@ INISection_t *ini_has_section(const INIData_t *data, const char *section);
  *   section - Destination pointer for the setion to be initialized.
  */
 void ini_section_init(const char *name, INISection_t *section);
+
+
 
 /*
  * Add a section to an INIData_t object by providing the name
@@ -103,6 +122,8 @@ void ini_section_init(const char *name, INISection_t *section);
  *   if the section already exists.
  */
 INISection_t *ini_add_section(INIData_t *data, const char *name);
+
+
 
 /*
  * Add a pair to an INIData_t object by providing the section
@@ -121,6 +142,8 @@ INISection_t *ini_add_section(INIData_t *data, const char *name);
  */
 INIPair_t *ini_add_pair(const INIData_t *data, const char *section, INIPair_t pair);
 
+
+
 /*
  * Add a pair directly to a section, agnostic to the parent
  * INIData_t object.
@@ -134,6 +157,8 @@ INIPair_t *ini_add_pair(const INIData_t *data, const char *section, INIPair_t pa
  *   A pointer to the newly-added pair within the section.
  */
 INIPair_t *ini_add_pair_to_section(INISection_t *section, INIPair_t pair);
+
+
 
 /*
  * Retrieve a value from an INIData_t object given a section
@@ -150,6 +175,8 @@ INIPair_t *ini_add_pair_to_section(INISection_t *section, INIPair_t pair);
  */
 const char *ini_get_value(const INIData_t *data, const char *section, const char *key);
 
+
+
 /*
  * Free the memory resources used by an INIData_t object.
  * This should be called if you have created an INIData_t
@@ -159,6 +186,8 @@ const char *ini_get_value(const INIData_t *data, const char *section, const char
  *   data - The INIData_t object to be free'd.
  */
 void ini_free(INIData_t *data);
+
+
 
 /*
  * A helper function that parses a character array and
@@ -173,6 +202,8 @@ void ini_free(INIData_t *data);
  *   otherwise.
  */
 bool ini_is_blank_line(const char *line);
+
+
 
 /*
  * A helper function that parses a character array and
@@ -193,6 +224,8 @@ bool ini_is_blank_line(const char *line);
  */
 bool ini_is_pair(const char *line, INIPair_t *pair);
 
+
+
 /*
  * A helper function that parses a character array and
  * determines if the array represents a [Section] via
@@ -211,5 +244,7 @@ bool ini_is_pair(const char *line, INIPair_t *pair);
  *   false otherwise.
  */
 bool ini_is_section(const char *line, INISection_t *section);
+
+
 
 #endif //INI_H
