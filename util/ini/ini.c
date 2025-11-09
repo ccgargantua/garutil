@@ -307,28 +307,10 @@ static bool is_valid_key_character_(const char c)
 static bool is_valid_value_character_(const char c)
 {
     if isalnum(c) return true;
-    switch (c)
-    {
-    case '_':
-    case '-':
-    case '+':
-    case '.':
-    case ',':
-    case ':':
-    case '"':
-    case '\'':
-    case '(':
-    case ')':
-    case '[':
-    case ']':
-    case '{':
-    case '}':
-    case '\\':
-    case '/':
-        return true;
-    default:
-        return false;
-    }
+    char valid_special[] = "_-+.,:\"\'()[]{}\\/";
+    for (int i = 0; i < sizeof(valid_special); i++)
+        if (c == valid_special[i]) return true;
+    return false;
 }
 
 
