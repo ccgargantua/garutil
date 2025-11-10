@@ -304,13 +304,13 @@ static bool is_valid_key_character_(const char c)
 
 
 
-static bool is_valid_value_character_(const char c, bool quoted)
+static bool is_valid_value_character_(const char c, const bool quoted)
 {
     if isalnum(c) return true;
-    if (!quoted) return false;
-    const char valid_special[] = " _-+.,:\'()[]{}\\/";
+    const char valid_special[] = "_-+.,:\'()[]{}\\/";
     for (int i = 0; i < sizeof(valid_special); i++)
         if (c == valid_special[i]) return true;
+    if (quoted && c == ' ') return true;
     return false;
 }
 
@@ -367,7 +367,11 @@ bool ini_is_pair(const char *line, INIPair_t *pair)
     }
     if (dest_c) *dest_c = '\0';
 
-    if (quoted && *c == '"') c++;
+    if (quoted)
+    {
+        if (*c == '"') c++;
+        else goto is_not_pair;
+    }
     c = skip_ignored_characters_(c);
     if (*c != '\0') goto is_not_pair;
 

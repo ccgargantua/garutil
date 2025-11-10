@@ -57,6 +57,7 @@ TEST(ini_tests, bad_pairs)
     const char line_empty[] = "";
     const char line_null[] = "\0";
     const char line_comment[] = "#key=value";
+    const char line_bad_string[] = "key=\"this is a # bad string\"";
 
     ASSERT_FALSE(ini_is_pair(line_invalid_key, NULL));
     ASSERT_FALSE(ini_is_pair(line_invalid_value, NULL));
@@ -65,6 +66,7 @@ TEST(ini_tests, bad_pairs)
     ASSERT_FALSE(ini_is_pair(line_empty, NULL));
     ASSERT_FALSE(ini_is_pair(line_null, NULL));
     ASSERT_FALSE(ini_is_pair(line_comment, NULL));
+    ASSERT_FALSE(ini_is_pair(line_bad_string, NULL));
 }
 
 TEST(ini_tests, sections)
@@ -122,7 +124,7 @@ TEST(ini_tests, file_writing)
 
     for (int i = 0; i < data->section_count; i++)
     {
-        INISection_t *section = &data->sections[i];
+        const INISection_t *section = &data->sections[i];
         for (int j = 0; j < section->pair_count; j++)
         {
             const char *key = section->pairs[j].key;
