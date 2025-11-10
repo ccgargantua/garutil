@@ -278,7 +278,7 @@ bool ini_is_blank_line(const char *line)
 
 static bool is_valid_section_starting_character_(const char c)
 {
-    return isalpha(c) || c == '_';
+    return (isalpha( (unsigned char) c)) || c == '_';
 }
 
 
@@ -344,7 +344,7 @@ bool ini_parse_section(const char *line, INISection_t *section, ptrdiff_t *error
 
 static bool is_valid_key_starting_value_(const char c)
 {
-    return isalpha(c) || c == '_';
+    return (isalpha( (unsigned char) c)) || c == '_';
 }
 
 
