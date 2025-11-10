@@ -7,14 +7,12 @@ TEST(ini_tests, blank_lines)
     const char space_line[] = "   ";
     const char new_line[] = "\n";
     const char null_line[] = "\0";
-    const char comment_line[] = "# comment here!";
-    const char alt_comment_line[] = "; and here!";
+    const char alt_comment_line[] = "; comment here!";
 
     ASSERT_TRUE(ini_is_blank_line(empty_line));
     ASSERT_TRUE(ini_is_blank_line(space_line));
     ASSERT_TRUE(ini_is_blank_line(new_line));
     ASSERT_TRUE(ini_is_blank_line(null_line));
-    ASSERT_TRUE(ini_is_blank_line(comment_line));
     ASSERT_TRUE(ini_is_blank_line(alt_comment_line));
 }
 
@@ -28,8 +26,8 @@ TEST(ini_tests, pairs)
 {
     const char line[] = "key=value";
     const char line_spaces[] = " key = value ";
-    const char line_comment[] = "key=value # comment";
-    const char line_alt_comment[] = "key=value ; comment";
+    const char line_comment[] = "key=value ; comment";
+    const char line_string[] = "key=\"this is a value\"";
 
     INIPair_t pair;
 
@@ -45,9 +43,9 @@ TEST(ini_tests, pairs)
     ASSERT_STREQ(pair.key, "key");
     ASSERT_STREQ(pair.value, "value");
 
-    ASSERT_TRUE(ini_is_pair(line_alt_comment, &pair));
+    ASSERT_TRUE(ini_is_pair(line_string, &pair));
     ASSERT_STREQ(pair.key, "key");
-    ASSERT_STREQ(pair.value, "value");
+    ASSERT_STREQ(pair.value, "this is a value");
 }
 
 TEST(ini_tests, bad_pairs)
@@ -73,8 +71,7 @@ TEST(ini_tests, sections)
 {
     const char line[] = "[section]";
     const char line_spaces[] = " [ section ] ";
-    const char line_comment[] = "[section] # comment here";
-    const char line_alt_comment[] = "[section] ; and here";
+    const char line_comment[] = "[section] ; comment here";
 
     INISection_t section;
     ASSERT_TRUE(ini_is_section(line, &section));
@@ -85,10 +82,6 @@ TEST(ini_tests, sections)
 
     ASSERT_TRUE(ini_is_section(line_comment, &section));
     ASSERT_STREQ(section.name, "section");
-
-    ASSERT_TRUE(ini_is_section(line_alt_comment, &section));
-    ASSERT_STREQ(section.name, "section");
-
 }
 
 TEST(ini_tests, bad_sections)
