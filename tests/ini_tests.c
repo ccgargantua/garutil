@@ -93,13 +93,8 @@ TEST(ini_tests, bad_pairs)
     ASSERT_FALSE(ini_parse_pair(line_comment, NULL, &error_offset));
     ASSERT_EQ(error_offset, 10);
 
-    /* TODO this test fails because it is an edge case.
-     *      in this case, there is a comment in the middle
-     *      of a string. The offset should be the end of the
-     *      line.
-     */
-    // ASSERT_FALSE(ini_parse_pair(line_bad_string, NULL, &error_offset));
-    // ASSERT_EQ(error_offset, 28);
+    ASSERT_FALSE(ini_parse_pair(line_bad_string, NULL, &error_offset));
+    ASSERT_EQ(error_offset, 15);
 
 }
 
