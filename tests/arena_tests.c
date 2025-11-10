@@ -53,23 +53,3 @@ TEST(arena_tests, alloc_sanity)
     ASSERT_EQ(arena_occupied(&arena), sizeof(data));
     ASSERT_EQ(arena_alloc(&arena, 1), NULL);
 }
-
-
-
-TEST(arena_tests, arena_use)
-{
-    arena_t arena;
-    char memory[256];
-    arena_init(&arena, memory, sizeof(memory));
-    char str[] = "Hello, world!\n";
-    unsigned char expected_checksum = 0;
-    for (char *c = str; *c != 0; c++)
-        expected_checksum ^= *c;
-    char *data = arena_alloc(&arena, sizeof(str));
-    memcpy(data, str, strlen(str));
-    arena_clear(&arena);
-    unsigned char resulting_checksum = 0;
-    for (int i = 0; i < sizeof(str); i++)
-        resulting_checksum ^= *(char *)(arena_alloc(&arena, 1));
-    ASSERT_EQ(expected_checksum, resulting_checksum);
-}

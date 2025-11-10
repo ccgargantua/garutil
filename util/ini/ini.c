@@ -15,14 +15,50 @@
 
 
 
-INIData_t *ini_parse_file(const char *filename)
+static void set_parse_error_(INIData_t *data, const char *line, const char *msg)
 {
-    FILE *file = fopen(filename, "r");
+    assert(data);
+    assert(data->error.offset >= 0);
+    if (!data || data->error.offset < 0) return;
+
+    data->error.encountered = true;
+    memset(data->error.line, 0, sizeof(data->error.line));
+    strncpy(data->error.line, line, strnlen(line, INI_MAX_LINE_SIZE));
+    memset(data->error.msg, 0, sizeof(data->error.msg));
+    strncpy(data->error.msg, msg, strnlen(msg, INI_MAX_LINE_SIZE));
+}
+
+
+
+static void free_data_sections_(INIData_t *data)
+{
+    if (data)
+    {
+        if (data->sections)
+        {
+            for (int i = 0; i < data->section_count; i++)
+                if (data->sections[i].pairs)
+                    free(data->sections[i].pairs);
+            free(data->sections);
+        }
+        data->sections = NULL;
+    }
+}
+
+
+
+
+INIData_t *ini_parse_file(FILE *file)
+{
     if (!file) return NULL;
 
     INIData_t *data = malloc(sizeof(INIData_t));
     assert(data);
+    if (!data) return NULL;
 
+    data->error.encountered = false;
+    memset(data->error.line, 0, sizeof(data->error.line));
+    data->error.offset = 0;
     data->section_count = 0;
     data->section_allocation = INITIAL_ALLOCATED_SECTIONS;
     data->sections = malloc(sizeof(INIPair_t) * data->section_allocation);
@@ -31,61 +67,72 @@ INIData_t *ini_parse_file(const char *filename)
     INISection_t *current_section = NULL;
     while (fgets(line, INI_MAX_LINE_SIZE, file))
     {
+        // Blank line?
         if (ini_is_blank_line(line)) continue;
 
-        INISection_t dest_section;
-        if (ini_is_section(line, &dest_section))
+        // Pair?
+        INIPair_t pair;
+        if (ini_parse_pair(line, &pair, &data->error.offset))
         {
-            INISection_t *existing_section = ini_has_section(data, dest_section.name);
+            if (!current_section)
+            {
+                set_parse_error_(data, line, "Pairs must reside within a section.");
+                goto parse_failure;
+            }
+            ini_add_pair_to_section(current_section, pair);
+            continue;
+        }
+
+        // It's not a pair... is it a section?
+        if (line[data->error.offset] != '[')
+        {
+            set_parse_error_(data, line, "Failed to parse pair.");
+            goto parse_failure;
+        }
+
+        // It's a section... but is it valid?
+        INISection_t dest_section;
+        if (ini_parse_section(line, &dest_section, &data->error.offset))
+        {
+            const INISection_t *existing_section = ini_has_section(data, dest_section.name);
             if (existing_section)
             {
-                current_section = existing_section;
-                continue;
+                char buffer[INI_MAX_LINE_SIZE];
+                snprintf(buffer, INI_MAX_LINE_SIZE, "Duplicate section '%s'.", dest_section.name);
+                set_parse_error_(data, line, buffer);
+                goto parse_failure;
             }
             current_section = ini_add_section(data, dest_section.name);
             continue;
         }
 
-        INIPair_t pair;
-        if (ini_is_pair(line, &pair))
-        {
-            if (!current_section) return NULL;
-            ini_add_pair_to_section(current_section, pair);
-        }
-        else return NULL;
+        // It's not a valid section
+        set_parse_error_(data, line, "Failed to parse section.");
+        goto parse_failure;
     }
-
-    fclose(file);
     return data;
+
+    parse_failure:
+    free_data_sections_(data);
+    return data;
+
 }
 
 
 
-void ini_write_file(const INIData_t *data, const char *filename)
+void ini_write_file(const INIData_t *data, FILE *file)
 {
     assert(data);
-    assert(filename);
-
-    FILE *file = fopen(filename, "w");
     assert(file);
+    if (!data || !file) return;
 
     for (int i = 0; i < data->section_count; i++)
     {
         const INISection_t *section = &data->sections[i];
-        fputs("\n[", file);
-        fputs(section->name, file);
-        fputs("]\n", file);
+        fprintf(file, "[%s]\n", section->name);
         for (int j = 0; j < section->pair_count; j++)
-        {
-            const INIPair_t *pair = &section->pairs[j];
-            fputs(pair->key, file);
-            fputs("=", file);
-            fputs(pair->value, file);
-            fputs("\n", file);
-        }
+            fprintf(file, "%s=%s\n", section->pairs[j].key, section->pairs[j].value);
     }
-
-    fclose(file);
 }
 
 
@@ -93,9 +140,10 @@ void ini_write_file(const INIData_t *data, const char *filename)
 INISection_t *ini_has_section(const INIData_t *data, const char *section)
 {
     if (!data || !section || !data->sections) return NULL;
+    static INIData_t *cached_data = NULL;
     static INISection_t *cached = NULL;
-    if (cached)
-        if (strncmp(section, cached->name, INI_MAX_STRING_SIZE) == 0)
+    if (cached && cached_data)
+        if (data == cached_data && strncmp(section, cached->name, INI_MAX_STRING_SIZE) == 0)
             return cached;
     for (int i = 0; i < data->section_count; i++)
         if (strncmp(section, data->sections[i].name, INI_MAX_STRING_SIZE) == 0)
@@ -111,6 +159,7 @@ INISection_t *ini_has_section(const INIData_t *data, const char *section)
 void ini_section_init(const char *name, INISection_t *section)
 {
     assert(section);
+    if (!section) return;
     memset(section->name, 0, INI_MAX_STRING_SIZE);
     strncpy(section->name, name, INI_MAX_STRING_SIZE - 1);
     section->pair_count = 0;
@@ -150,6 +199,7 @@ INIPair_t *ini_add_pair(const INIData_t *data, const char *section, const INIPai
 INIPair_t *ini_add_pair_to_section(INISection_t *section, const INIPair_t pair)
 {
     assert(section);
+    if (!section) return NULL;
 
     if (section->pair_count >= section->pair_allocation)
     {
@@ -173,6 +223,8 @@ const char *ini_get_value(const INIData_t *data, const char *section, const char
     assert(data->sections);
     assert(section);
     assert(key);
+
+    if (!data || !section || !key || !data->sections) return NULL;
 
     INISection_t *found_section = NULL;
     for (int i = 0; i < data->section_count; i++)
@@ -200,13 +252,7 @@ const char *ini_get_value(const INIData_t *data, const char *section, const char
 void ini_free(INIData_t *data)
 {
     if (!data) return;
-    if (data->sections)
-    {
-        for (int i = 0; i < data->section_count; i++)
-            if (data->sections[i].pairs)
-                free(data->sections[i].pairs);
-        free(data->sections);
-    }
+    free_data_sections_(data);
     free(data);
 }
 
@@ -246,17 +292,24 @@ static bool is_valid_section_character_(const char c)
 
 
 // Assumes line is null-terminated.
-bool ini_is_section(const char *line, INISection_t *section)
+bool ini_parse_section(const char *line, INISection_t *section, ptrdiff_t *error_offset)
 {
     assert(line);
+    if (!line) return false;
+
     const char *c = line;
+    if (error_offset) *error_offset = 0;
 
     char *dest_c = NULL;
     if (section)
+    {
+        memset(section->name, 0, sizeof(section->name));
         dest_c = section->name;
+    }
 
     c = skip_ignored_characters_(c);
-    if (*c++ != '[') goto is_not_section;
+    if (*c != '[') goto is_not_section;
+    c++;
     c = skip_ignored_characters_(c);
 
     if (!is_valid_section_starting_character_(*c)) goto is_not_section;
@@ -264,7 +317,6 @@ bool ini_is_section(const char *line, INISection_t *section)
     {
         if (dest_c)
         {
-            assert(dest_c - section->name < INI_MAX_STRING_SIZE && "Exceeded max string length.");
             if (dest_c - section->name >= INI_MAX_STRING_SIZE)
                 return false;
             *dest_c++ = *c;
@@ -283,6 +335,7 @@ bool ini_is_section(const char *line, INISection_t *section)
     return true;
 
     is_not_section:
+    if (error_offset) *error_offset = c - line;
     if (section)
         section->name[0] = '\0';
     return false;
@@ -308,7 +361,7 @@ static bool is_valid_value_character_(const char c, const bool quoted)
 {
     if isalnum(c) return true;
     const char valid_special[] = "_-+.,:\'()[]{}\\/";
-    for (int i = 0; i < sizeof(valid_special); i++)
+    for (int i = 0; i < strlen(valid_special); i++)
         if (c == valid_special[i]) return true;
     if (quoted && c == ' ') return true;
     return false;
@@ -317,15 +370,22 @@ static bool is_valid_value_character_(const char c, const bool quoted)
 
 
 // Assumes line is null-terminated.
-bool ini_is_pair(const char *line, INIPair_t *pair)
+bool ini_parse_pair(const char *line, INIPair_t *pair, ptrdiff_t *error_offset)
 {
     assert(line);
+    if (!line) return false;
+
+    if (error_offset) *error_offset = 0;
     const char *c = line;
-
     char *dest_c = NULL;
-    if (pair) dest_c = pair->key;
 
+    if (pair)
+    {
+        memset(pair->key, 0, sizeof(pair->key));
+        dest_c = pair->key;
+    }
     c = skip_ignored_characters_(c);
+
 
     // Key
     if (!is_valid_key_starting_value_(*c)) goto is_not_pair;
@@ -346,7 +406,10 @@ bool ini_is_pair(const char *line, INIPair_t *pair)
     c = skip_ignored_characters_(c);
 
     if (pair)
+    {
+        memset(pair->value, 0, sizeof(pair->value));
         dest_c = pair->value;
+    }
 
 
     // value
@@ -354,6 +417,7 @@ bool ini_is_pair(const char *line, INIPair_t *pair)
     if (*c == '"')
     {
         quoted = true;
+        if (dest_c) *dest_c++ = *c;
         c++;
     }
     while (is_valid_value_character_(*c, quoted))
@@ -365,19 +429,22 @@ bool ini_is_pair(const char *line, INIPair_t *pair)
         }
         c++;
     }
-    if (dest_c) *dest_c = '\0';
-
     if (quoted)
     {
-        if (*c == '"') c++;
-        else goto is_not_pair;
+        if (*c != '"') goto is_not_pair;
+        if (dest_c) *dest_c++ = *c;
+        c++;
     }
+    if (dest_c) *dest_c = '\0';
     c = skip_ignored_characters_(c);
-    if (*c != '\0') goto is_not_pair;
+
+    if (*c != '\0')
+        goto is_not_pair;
 
     return true;
 
     is_not_pair:
+    if (error_offset) *error_offset = c - line;
     if (pair)
     {
         pair->key[0] = '\0';
