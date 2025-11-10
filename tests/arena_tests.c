@@ -1,6 +1,8 @@
 #include "arena/arena.h"
 #include "rktest.h"
 
+
+
 TEST(arena_tests, init_sanity)
 {
     arena_t arena;
@@ -13,6 +15,8 @@ TEST(arena_tests, init_sanity)
     ASSERT_EQ(arena_occupied(&arena), 0);
 }
 
+
+
 TEST(arena_tests, clear_sanity)
 {
     arena_t arena;
@@ -24,6 +28,8 @@ TEST(arena_tests, clear_sanity)
     arena_clear(&arena);
     ASSERT_EQ(arena.begin, arena.ptr);
 }
+
+
 
 TEST(arena_tests, alloc_sanity)
 {
@@ -47,6 +53,8 @@ TEST(arena_tests, alloc_sanity)
     ASSERT_EQ(arena_occupied(&arena), sizeof(data));
     ASSERT_EQ(arena_alloc(&arena, 1), NULL);
 }
+
+
 
 TEST(arena_tests, arena_use)
 {
