@@ -18,7 +18,6 @@
 static void set_parse_error_(INIData_t *data, const char *line, const char *msg)
 {
     assert(data);
-    assert(data->error.offset >= 0);
     if (!data || data->error.offset < 0) return;
 
     data->error.encountered = true;
@@ -61,7 +60,7 @@ INIData_t *ini_parse_file(FILE *file)
     data->error.offset = 0;
     data->section_count = 0;
     data->section_allocation = INITIAL_ALLOCATED_SECTIONS;
-    data->sections = malloc(sizeof(INIPair_t) * data->section_allocation);
+    data->sections = malloc(sizeof(INISection_t) * data->section_allocation);
 
     char line[INI_MAX_LINE_SIZE];
     INISection_t *current_section = NULL;
@@ -176,7 +175,7 @@ INISection_t *ini_add_section(INIData_t *data, const char *name)
     if (data->section_count >= data->section_allocation)
     {
         data->section_allocation *= 2;
-        INISection_t *re = realloc(data->sections, sizeof(INIPair_t) * data->section_allocation);
+        INISection_t *re = realloc(data->sections, sizeof(INISection_t) * data->section_allocation);
         if (!re) return NULL;
         data->sections = re;
     }
@@ -187,7 +186,7 @@ INISection_t *ini_add_section(INIData_t *data, const char *name)
 
 
 
-INIPair_t *ini_add_pair(const INIData_t *data, const char *section, const INIPair_t pair)
+INIPair_t *ini_add_pair(INIData_t *data, const char *section, const INIPair_t pair)
 {
     INISection_t *existing_section = ini_has_section(data, section);
     if (!existing_section) return NULL;
@@ -286,7 +285,7 @@ static bool is_valid_section_starting_character_(const char c)
 
 static bool is_valid_section_character_(const char c)
 {
-    return isalnum(c) || c == '_';
+    return (isalnum((unsigned char)c)) || c == '_';
 }
 
 
@@ -352,17 +351,17 @@ static bool is_valid_key_starting_value_(const char c)
 
 static bool is_valid_key_character_(const char c)
 {
-    return isalnum(c) || c == '_';
+    return (isalnum((unsigned char)c)) || c == '_';
 }
 
 
 
 static bool is_valid_value_character_(const char c, const bool quoted)
 {
-    if isalnum(c) return true;
+    if (isalnum((unsigned char)c)) return true;
     const char valid_special[] = "_-+.,:\'()[]{}\\/";
-    for (int i = 0; i < strlen(valid_special); i++)
-        if (c == valid_special[i]) return true;
+    for (const char *p = valid_special; *p != '\0'; p++)
+        if (c == *p) return true;
     if (quoted && c == ' ') return true;
     return false;
 }

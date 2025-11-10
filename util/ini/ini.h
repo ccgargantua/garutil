@@ -150,7 +150,7 @@ INISection_t *ini_add_section(INIData_t *data, const char *name);
  *   section within `data`, or NULL on failure (i.e., providing
  *   a name for a section that does not exist in `data`)
  */
-INIPair_t *ini_add_pair(const INIData_t *data, const char *section, INIPair_t pair);
+INIPair_t *ini_add_pair(INIData_t *data, const char *section, INIPair_t pair);
 
 
 
